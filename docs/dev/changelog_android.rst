@@ -1,6 +1,20 @@
 OppiaMobile Android App Change Log
 ====================================
 
+
+.. note:: 
+	Starting with the release of the OppiaMobile Android App v57 (6.0.0), we will be moving to using Android Studio as the 
+	supported development environment. This is an important note since the project structure will change significantly.
+
+.. _appv57:
+
+v57 (6.0.0) - not yet released
+--------------------------------------
+
+* 490: Add option to show the logged in user - http://github.com/DigitalCampus/oppia-mobile-android/issues/issue/490
+* 421: context menu of the main activity into a drawer - http://github.com/DigitalCampus/oppia-mobile-android/issues/issue/421
+* 360: Look at how to reorganise menu options - http://github.com/DigitalCampus/oppia-mobile-android/issues/issue/360
+
 .. _appv56:
 
 v56 (5.5.0) - released 21 March 2016

@@ -10,6 +10,12 @@ v0.9.4 - not yet released
 * 289: Add default report for no badges (course completion rates) - http://github.com/DigitalCampus/django-oppia/issues/issue/289
 * 273: Refactor UserProfile model - http://github.com/DigitalCampus/django-oppia/issues/issue/273
 * 314: After logout, then logging in again the page redirects to logout again - http://github.com/DigitalCampus/django-oppia/issues/issue/314
+* 276: Add content development training course to docs - http://github.com/DigitalCampus/django-oppia/issues/issue/276
+* 313: Add architecture/workflow to docs - http://github.com/DigitalCampus/django-oppia/issues/issue/313
+* 305: Refactor usage of staticfiles - using django 1.8 method - http://github.com/DigitalCampus/django-oppia/issues/issue/305
+
+.. note::
+ 	Make sure that django.contrib.staticfiles is included in your INSTALLED_APPS setting (for issue #305 above)
 
 .. _serverv0.9.3:
 
