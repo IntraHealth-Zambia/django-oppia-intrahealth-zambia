@@ -2,6 +2,7 @@
 {% load i18n %} 
 {% load display_functions %} 
 {% load crispy_forms_tags %}
+{% load staticfiles %}
 
 {% block extra_head_title %}
 	{% trans 'Home' %}
@@ -22,13 +23,14 @@
 	{% include "includes/messages.html" %}	
 	{% crispy form %}
 	
-	<h3>{% trans 'home_leaderboard' %}</h3>
+	<h3>{% trans 'home_leaderboard' %}<a class="btn btn-primary" style="margin-left:20px;" href="{% url 'oppia_gamification_leaderboard_export_server' %}" download="leaderboard.json">{% trans 'Export' %}</a></h3>
 	{% include "oppia/includes/leaderboard.html" %}
 	<div><a href="{% url 'oppia_leaderboard' %}">{% trans "more..." %}</a></div>
 {% else %}
+    {% static "oppia/images/unzalogo.png" as oppia_logo %}
 	{% blocktrans %} 
 	<div style="text-align:center; margin-top:20px;">
-		<img src="{{ STATIC_URL }}oppia/images/unzalogo.png" alt="UNZA logo"/>
+		<img src="{{ oppia_logo }}" alt="UNZA logo"/>
 	</div>
 	<div style="max-width:350px; text-align:center; margin: 10px auto ">
 	<h3>Welcome to UNZA Mobile</h3>

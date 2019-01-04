@@ -1,1 +1,5 @@
-VERSION = (0, 9, 3, 'beta', 0)
+VERSION = (0, 10, 1, 'beta', 0)
+DEFAULT_IP_ADDRESS = None
+
+import warnings
+warnings.simplefilter('default')

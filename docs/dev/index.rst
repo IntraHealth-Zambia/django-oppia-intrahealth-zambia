@@ -7,18 +7,23 @@ For installing OppiaMobile server and Moodle block please refer to:
    :maxdepth: 1
 
    architecture
+   roadmap
    install
    block_install
-   upgrade
    aws
    virtualbox
+   server/upgrade
    settings
-   api
+   server/management-commands
    utilities
    code_process
+   getting-started
+   testing/index
    remote_device_admin
+   integration/launch_from_other_app
    changelog
-   
+   troubleshooting/index
+  
 
 .. _customisation:
 
@@ -32,8 +37,7 @@ advantage subsequent developments, bug fixes and new features implemented in the
 OppiaMobile code.
 
 If you need and help or advice in getting set up and running, or any questions
-about the platform, then please post on our `OppiaMobile Google Groups forum 
-<https://groups.google.com/forum/#!forum/oppiamobile>`_. 
+about the platform, then please post on our `OppiaMobile Google Groups forum <https://groups.google.com/forum/#!forum/oppiamobile/>`_. 
 
 .. toctree::
    :maxdepth: 1
