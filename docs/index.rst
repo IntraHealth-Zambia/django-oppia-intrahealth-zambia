@@ -1,29 +1,72 @@
-.. OppiaMobile documentation master file, created by
-   sphinx-quickstart on Tue Jun 25 16:03:07 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. image::  images/dc_logo.png
+	:align: center
+
 
 Welcome to the OppiaMobile documentation
 ==============================================
 
-`OppiaMobile <http://oppia-mobile.org/>`_ is the mobile learning platform from
-`Digital Campus <http://digital-campus.org/>`_. This documentation details how 
-to set up your own implementation and how you may make basic customisations.
 
-Contents:
+`OppiaMobile <https://oppia-mobile.org/>`_ is an open source mobile learning platform specifically designed for 
+delivering learning content, multimedia and quizzes in low-broadband settings and primarily used for health worker 
+training.
+
+Overview
+----------
 
 .. toctree::
    :maxdepth: 1
    
-   features
-   dev/index
-   author/author
-   permissions/index
-   dashboard/index
-   gamification
-   viz/index
-   training/index
-   author/adapt/index
-   help
-   acknowledgements
+   overview/features
+   overview/architecture
+   overview/roadmap
+   overview/governance
+   overview/acknowledgements
    
+
+Technical
+----------
+
+.. toctree::
+   :maxdepth: 1
+   
+   technical/index
+   technical/install/index
+   technical/releases/index
+   technical/testing/index
+   technical/dev/contribute
+   technical/manage/index
+
+
+Content Creation
+-------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   content/author
+   content/publish_to_oppia
+   content/style/index
+   content/adapt/index
+
+Implementers/Users Guide
+--------------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   implementers/dashboard/index
+   implementers/permissions/index
+   implementers/gamification/index
+   implementers/integration/index
+   implementers/viz/index
+   implementers/offline/index
+
+Training & Support
+-------------------
+
+.. toctree::
+   :maxdepth: 1
+   
+   support/training/index
+   support/troubleshooting/index
+   support/help

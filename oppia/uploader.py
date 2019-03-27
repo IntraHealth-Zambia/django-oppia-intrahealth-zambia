@@ -2,25 +2,25 @@
 
 import codecs
 import json
+import os
 import shutil
 import xml.dom.minidom
-from xml.dom.minidom import Node
 from xml.sax.saxutils import unescape
 from zipfile import ZipFile, BadZipfile
 
-import os
 from django.conf import settings
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.translation import ugettext as _
 
-from oppia.gamification.models import CourseGamificationEvent, ActivityGamificationEvent, MediaGamificationEvent, QuizGamificationEvent
+from gamification.models import CourseGamificationEvent, ActivityGamificationEvent, MediaGamificationEvent, \
+    QuizGamificationEvent
 from oppia.models import Course, Section, Activity, Media
-from oppia.quiz.models import Quiz, Question, QuizQuestion, Response, ResponseProps, QuestionProps, QuizProps
+from quiz.models import Quiz, Question, QuizQuestion, Response, ResponseProps, QuestionProps, QuizProps
 
 
 def handle_uploaded_file(f, extract_path, request, user):
-    zipfilepath = settings.COURSE_UPLOAD_DIR + f.name
+    zipfilepath = os.path.join(settings.COURSE_UPLOAD_DIR, f.name)
 
     with open(zipfilepath, 'wb+') as destination:
         for chunk in f.chunks():
@@ -34,7 +34,6 @@ def handle_uploaded_file(f, extract_path, request, user):
         return False, 500
 
     mod_name = ''
-    print(os.listdir(extract_path))
     for dir in os.listdir(extract_path)[:1]:
         mod_name = dir
 
@@ -43,6 +42,7 @@ def handle_uploaded_file(f, extract_path, request, user):
         messages.info(request, _("Invalid course zip file"), extra_tags="danger")
         return False, 400
 
+    response = 200
     try:
         course, response = process_course(extract_path, f, mod_name, request, user)
     except Exception as e:
@@ -52,7 +52,7 @@ def handle_uploaded_file(f, extract_path, request, user):
         # remove the temp upload files
         shutil.rmtree(extract_path, ignore_errors=True)
 
-    return course, 200
+    return course, response
 
 
 def process_course(extract_path, f, mod_name, request, user):
@@ -117,14 +117,13 @@ def process_course(extract_path, f, mod_name, request, user):
     process_quizzes_locally = False
     if 'exportversion' in meta_info and meta_info['exportversion'] >= settings.OPPIA_EXPORT_LOCAL_MINVERSION:
         process_quizzes_locally = True
-        print('processing course\'s quizzes locally')
 
     parse_course_contents(request, doc, course, user, new_course, process_quizzes_locally)
     clean_old_course(request, oldsections, old_course_filename, course)
 
     tmp_path = replace_zip_contents(xml_path, doc, mod_name, extract_path)
     # Extract the final file into the courses area for preview
-    zipfilepath = settings.COURSE_UPLOAD_DIR + f.name
+    zipfilepath = os.path.join(settings.COURSE_UPLOAD_DIR, f.name)
     shutil.copy(tmp_path + ".zip", zipfilepath)
 
     course_preview_path = settings.MEDIA_ROOT + "courses/"
@@ -192,7 +191,6 @@ def parse_course_contents(req, xml_doc, course, user, new_course, process_quizze
                 media.digest = file_element.getAttribute("digest")
 
                 if len(url) > Media.URL_MAX_LENGTH:
-                    print(url)
                     messages.info(req, _('File %(filename)s has a download URL larger than the maximum length permitted. The media file has not been registered, so it won\'t be tracked. Please, fix this issue and upload the course again.') % {'filename': media.filename})
                 else:
                     media.download_url = url
@@ -232,7 +230,7 @@ def parse_and_save_activity(req, user, section, act, new_course, process_quiz_lo
 
     content = ""
     act_type = act.getAttribute("type")
-    if act_type == "page":
+    if act_type == "page" or act_type == "url":
         temp_content = {}
         for t in act.getElementsByTagName("location"):
             if t.firstChild and t.getAttribute('lang'):
@@ -244,12 +242,6 @@ def parse_and_save_activity(req, user, section, act, new_course, process_quiz_lo
     elif act_type == "resource":
         for c in act.getElementsByTagName("location"):
             content = c.firstChild.nodeValue
-    elif act_type == "url":
-        temp_content = {}
-        for t in act.getElementsByTagName("location"):
-            if t.firstChild and t.getAttribute('lang'):
-                temp_content[t.getAttribute('lang')] = t.firstChild.nodeValue
-        content = json.dumps(temp_content)
     else:
         content = None
 
@@ -357,10 +349,8 @@ def create_quiz(user, quiz_obj, act_xml):
     quiz.description = quiz_obj['description']
     quiz.save()
 
-    print("quiz saved")
     # save gamification events
     if act_xml.getElementsByTagName('gamification')[:1]:
-        print(act_xml.getElementsByTagName('gamification')[0])
         events = parse_gamification_events(act_xml.getElementsByTagName('gamification')[0])
         # remove anything existing for this course
         QuizGamificationEvent.objects.filter(quiz=quiz).delete()
@@ -371,50 +361,11 @@ def create_quiz(user, quiz_obj, act_xml):
 
     quiz_obj['id'] = quiz.pk
 
-    for prop in quiz_obj['props']:
-        if prop is not 'id':
-            QuizProps(
-                quiz=quiz, name=prop,
-                value=quiz_obj['props'][prop]
-            ).save()
+    # add quiz props
+    create_quiz_props(quiz, quiz_obj)
 
-    for q in quiz_obj['questions']:
-
-        question = Question(owner=user,
-                type=q['question']['type'],
-                title=q['question']['title'])
-        question.save()
-
-        quiz_question = QuizQuestion(quiz=quiz, question=question, order=q['order'])
-        quiz_question.save()
-
-        q['id'] = quiz_question.pk
-        q['question']['id'] = question.pk
-
-        for prop in q['question']['props']:
-            if prop is not 'id':
-                QuestionProps(
-                    question=question, name=prop,
-                    value=q['question']['props'][prop]
-                ).save()
-
-        for r in q['question']['responses']:
-            response = Response(
-                owner=user,
-                question=question,
-                title=r['title'],
-                score=r['score'],
-                order=r['order']
-            )
-            response.save()
-            r['id'] = response.pk
-
-            for prop in r['props']:
-                if prop is not 'id':
-                    ResponseProps(
-                        response=response, name=prop,
-                        value=r['props'][prop]
-                    ).save()
+    # add quiz questions
+    create_quiz_questions(user, quiz, quiz_obj)
 
     return json.dumps(quiz_obj)
 
@@ -485,6 +436,55 @@ def clean_old_course(req, oldsections, old_course_filename, course):
 
     if old_course_filename is not None and old_course_filename != course.filename:
         try:
-            os.remove(settings.COURSE_UPLOAD_DIR + old_course_filename)
+            os.remove( os.path.join(settings.COURSE_UPLOAD_DIR, old_course_filename) )
         except OSError:
             pass
+        
+# helper functions
+
+def create_quiz_props(quiz, quiz_obj):
+    for prop in quiz_obj['props']:
+        if prop is not 'id':
+            QuizProps(
+                quiz=quiz, name=prop,
+                value=quiz_obj['props'][prop]
+            ).save()
+
+def create_quiz_questions(user, quiz, quiz_obj ):
+    for q in quiz_obj['questions']:
+
+        question = Question(owner=user,
+                type=q['question']['type'],
+                title=q['question']['title'])
+        question.save()
+
+        quiz_question = QuizQuestion(quiz=quiz, question=question, order=q['order'])
+        quiz_question.save()
+
+        q['id'] = quiz_question.pk
+        q['question']['id'] = question.pk
+
+        for prop in q['question']['props']:
+            if prop is not 'id':
+                QuestionProps(
+                    question=question, name=prop,
+                    value=q['question']['props'][prop]
+                ).save()
+
+        for r in q['question']['responses']:
+            response = Response(
+                owner=user,
+                question=question,
+                title=r['title'],
+                score=r['score'],
+                order=r['order']
+            )
+            response.save()
+            r['id'] = response.pk
+
+            for prop in r['props']:
+                if prop is not 'id':
+                    ResponseProps(
+                        response=response, name=prop,
+                        value=r['props'][prop]
+                    ).save()

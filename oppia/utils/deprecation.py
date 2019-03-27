@@ -1,5 +1,4 @@
 import warnings
 
-
-class RemovedInOppia0110Warning(DeprecationWarning):
+class RemovedInOppia0120Warning(DeprecationWarning):
     pass

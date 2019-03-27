@@ -1,4 +1,5 @@
 # oppia/signals.py
+import math
 import warnings
 
 from django.conf import settings
@@ -6,14 +7,12 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.dispatch import Signal
 
-from oppia.gamification.default_points import OPPIA_DEFAULT_POINTS
-from oppia.models import Points, Award, Tracker, Activity, Section, Course, Cohort
-from oppia.quiz.models import Quiz, QuizAttempt
-from oppia.utils.deprecation import RemovedInOppia0110Warning
-
-import math
+from gamification.default_points import OPPIA_DEFAULT_POINTS
+from oppia.models import Points, Tracker, Activity
+from quiz.models import Quiz, QuizAttempt
 
 course_downloaded = Signal(providing_args=["course", "user"])
+
 
 
 # rules for applying points (or not)
@@ -32,6 +31,8 @@ def signup_callback(sender, **kwargs):
     if not apply_points(user):
         return
 
+    # We are calculating points in the app, so don't assign them here
+    '''
     if created:
         p = Points()
         p.points = OPPIA_DEFAULT_POINTS['REGISTER']
@@ -40,6 +41,7 @@ def signup_callback(sender, **kwargs):
         p.user = user
         p.save()
     return
+    '''
 
 
 def quizattempt_callback(sender, **kwargs):
@@ -63,7 +65,8 @@ def quizattempt_callback(sender, **kwargs):
         p.user = quiz_attempt.user
         p.description = quiz_attempt.event
         p.course = course
-        p.save()
+        # Points are sent in the quiz attempt tracker, so don't save them twice
+        # p.save()
         return
 
     # Check user doesn't own the quiz
@@ -120,57 +123,48 @@ def quizattempt_callback(sender, **kwargs):
     return
 
 
-def createquiz_callback(sender, **kwargs):
-    warnings.warn(
-        "oppia.signals.createquiz_callback() is deprecated and will be removed in Oppia server 0.11.0.",
-        RemovedInOppia0110Warning, 2)
-    quiz = kwargs.get('instance')
-    created = kwargs.get('created')
-
-    if not apply_points(quiz.owner):
-        return
-
-    if created:
-        p = Points()
-        p.points = OPPIA_DEFAULT_POINTS['QUIZ_CREATED']
-        p.type = 'quizcreated'
-        p.description = "Quiz created: " + quiz.title
-        p.user = quiz.owner
-        p.save()
-    return
+NON_ACTIVITY_EVENTS = [
+    'course_downloaded', 'register'
+]
 
 
 def tracker_callback(sender, **kwargs):
 
     tracker = kwargs.get('instance')
+    description = None
+
+    print tracker.uuid
 
     if not apply_points(tracker.user):
-        return
-
-    if not tracker.activity_exists():
         return
 
     if tracker.course is not None and tracker.course.user == tracker.user and settings.OPPIA_COURSE_OWNERS_EARN_POINTS is False:
         return
 
-    type = 'activity_completed'
-    points = OPPIA_DEFAULT_POINTS['ACTIVITY_COMPLETED']
-    if tracker.get_activity_type() == "media":
-        description = "Media played: " + tracker.get_activity_title()
-        type = 'mediaplayed'
-        if tracker.is_first_tracker_today():
-            points = OPPIA_DEFAULT_POINTS['MEDIA_STARTED']
+    if tracker.event not in NON_ACTIVITY_EVENTS:
+        if not tracker.activity_exists():
+            return
+
+        type = 'activity_completed'
+        points = OPPIA_DEFAULT_POINTS['ACTIVITY_COMPLETED']
+        if tracker.get_activity_type() == "media":
+            description = "Media played: " + tracker.get_activity_title()
+            type = 'mediaplayed'
+            if tracker.is_first_tracker_today():
+                points = OPPIA_DEFAULT_POINTS['MEDIA_STARTED']
+            else:
+                points = 0
+            points += (OPPIA_DEFAULT_POINTS['MEDIA_PLAYING_POINTS_PER_INTERVAL'] * math.floor(tracker.time_taken / OPPIA_DEFAULT_POINTS['MEDIA_PLAYING_INTERVAL']))
+            if points > OPPIA_DEFAULT_POINTS['MEDIA_MAX_POINTS']:
+                points = OPPIA_DEFAULT_POINTS['MEDIA_MAX_POINTS']
         else:
-            points = 0
-        points += (OPPIA_DEFAULT_POINTS['MEDIA_PLAYING_POINTS_PER_INTERVAL'] * math.floor(tracker.time_taken / OPPIA_DEFAULT_POINTS['MEDIA_PLAYING_INTERVAL']))
-        if points > OPPIA_DEFAULT_POINTS['MEDIA_MAX_POINTS']:
-            points = OPPIA_DEFAULT_POINTS['MEDIA_MAX_POINTS']
-    else:
-        description = "Activity completed: " + tracker.get_activity_title()
+            description = "Activity completed: " + tracker.get_activity_title()
 
     if tracker.points is not None:
         points = tracker.points
         type = tracker.event
+        if not description:
+            description = tracker.event
     else:
         if tracker.get_activity_type() is not "media":
             if not tracker.is_first_tracker_today():
@@ -188,32 +182,6 @@ def tracker_callback(sender, **kwargs):
 
     return
 
-
-def course_download_callback(sender, **kwargs):
-    warnings.warn(
-        "oppia.signals.course_download_callback() is deprecated and will be removed in Oppia server 0.11.0.",
-        RemovedInOppia0110Warning, 2)
-    user = kwargs.get('user')
-    course = kwargs.get('course')
-    if not apply_points(user):
-        return
-
-    if course.user == user and settings.OPPIA_COURSE_OWNERS_EARN_POINTS is False:
-        return
-
-    if not course.is_first_download(user):
-        return
-
-    p = Points()
-    p.points = OPPIA_DEFAULT_POINTS['COURSE_DOWNLOADED']
-    p.type = 'coursedownloaded'
-    p.description = "Course downloaded: " + course.get_title()
-    p.user = user
-    p.course = course
-    p.save()
-    return
-
-
 def badgeaward_callback(sender, **kwargs):
     award = kwargs.get('instance')
     if not apply_points(award.user):
@@ -227,8 +195,6 @@ def badgeaward_callback(sender, **kwargs):
     p.save()
     return
 
-course_downloaded.connect(course_download_callback)
 models.signals.post_save.connect(tracker_callback, sender=Tracker)
 models.signals.post_save.connect(signup_callback, sender=User)
-models.signals.post_save.connect(createquiz_callback, sender=Quiz)
 models.signals.post_save.connect(quizattempt_callback, sender=QuizAttempt)

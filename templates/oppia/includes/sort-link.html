@@ -1,0 +1,15 @@
+{% load query_string %}
+
+<a
+    {% if ordered_ascending or ordered_descending %}class="sorted" {% endif %}
+    href="{{ ajax_url }}{% query_string "" "page,order_by" %}&order_by={% if ordered_ascending %}-{% endif %}{{ orderby }}">
+    <em class="fas
+    {% if ordered_ascending %}
+        fa-sort-amount-down
+    {% elif ordered_descending %}
+        fa-sort-amount-up
+    {% else %}
+        fa-sort
+    {% endif %}
+    "></em>
+{{ title }}</a>

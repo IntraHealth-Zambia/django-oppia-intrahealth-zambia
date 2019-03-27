@@ -1,33 +1,30 @@
 # oppia/views.py
 import datetime
 import json
-from wsgiref.util import FileWrapper
-
 import operator
 import os
+
 import tablib
 from dateutil.relativedelta import relativedelta
-from django.core import exceptions
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
-from django.urls import reverse
 from django.db.models import Count, Sum
-from django.forms.formsets import formset_factory
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
-from oppia.forms import CohortForm
-from oppia.forms import UploadCourseStep1Form, UploadCourseStep2Form, DateRangeForm, DateRangeIntervalForm
+from helpers.forms.dates import DateRangeIntervalForm, DateRangeForm, DateDiffForm
+from oppia.forms.cohort import CohortForm
+from oppia.forms.upload import UploadCourseStep1Form, UploadCourseStep2Form
 from oppia.models import Activity, Points
 from oppia.models import Tracker, Tag, CourseTag, CourseCohort
 from oppia.permissions import *
-from oppia.profile.models import UserProfile
-from oppia.profile.views import get_paginated_users
-from oppia.quiz.models import Quiz, QuizAttempt, QuizAttemptResponse
-from oppia.reports.signals import dashboard_accessed
-from oppia.summary.models import UserCourseSummary, CourseDailyStats
+from profile.models import UserProfile
+from profile.views import get_paginated_users
+from quiz.models import Quiz, QuizAttempt, QuizAttemptResponse
+from reports.signals import dashboard_accessed
+from summary.models import UserCourseSummary, CourseDailyStats
 from uploader import handle_uploaded_file
 
 
@@ -243,7 +240,7 @@ def upload_step1(request):
             if course:
                 return HttpResponseRedirect(reverse('oppia_upload2', args=[course.id]))  # Redirect after POST
             else:
-                os.remove(settings.COURSE_UPLOAD_DIR + request.FILES['course_file'].name)
+                os.remove(os.path.join(settings.COURSE_UPLOAD_DIR, request.FILES['course_file'].name))
     else:
         form = UploadCourseStep1Form()  # An unbound form
 
@@ -263,7 +260,7 @@ def upload_step2(request, course_id, editing=False):
         form = UploadCourseStep2Form(request.POST, request.FILES)
         if form.is_valid() and course:
             #add the tags
-            add_course_tags(request, form, course)
+            add_course_tags(form, course, request.user)
             redirect = 'oppia_course' if editing else 'oppia_upload_success'
             return HttpResponseRedirect(reverse(redirect))  # Redirect after POST
     else:
@@ -277,8 +274,8 @@ def upload_step2(request, course_id, editing=False):
                                'editing': editing,
                                'title': page_title})
 
-def add_course_tags(request, form, course):
-    tags = form.cleaned_data.get("tags","").strip().split(",")
+def add_course_tags(form, course, user):
+    tags = form.cleaned_data.get("tags", "").strip().split(",")
     is_draft = form.cleaned_data.get("is_draft")
     if len(tags) > 0:
         course.is_draft = is_draft
@@ -289,7 +286,7 @@ def add_course_tags(request, form, course):
             except Tag.DoesNotExist:
                 tag = Tag()
                 tag.name = t.strip()
-                tag.created_by = request.user
+                tag.created_by = user
                 tag.save()
             # add tag to course
             try:
@@ -731,6 +728,7 @@ def cohort_course_view(request, cohort_id, course_id):
         if course_stats:
             course_stats = course_stats[0]
             data = {'user': user,
+                'user_display': str(user),
                 'no_quizzes_completed': course_stats.quizzes_passed,
                 'pretest_score': course_stats.pretest_score,
                 'no_activities_completed': course_stats.completed_activities,
@@ -740,6 +738,7 @@ def cohort_course_view(request, cohort_id, course_id):
         else:
             #The user has no activity registered
             data = {'user': user,
+                'user_display': str(user),
                 'no_quizzes_completed': 0,
                 'pretest_score': 0,
                 'no_activities_completed': 0,
@@ -749,9 +748,9 @@ def cohort_course_view(request, cohort_id, course_id):
 
         students.append(data)
 
-    order_options = ['user', 'no_quizzes_completed', 'pretest_score',
+    order_options = ['user_display', 'no_quizzes_completed', 'pretest_score',
                      'no_activities_completed', 'no_points', 'no_badges', 'no_media_viewed']
-    default_order = 'user'
+    default_order = 'pretest_score'
 
     ordering = request.GET.get('order_by', default_order)
     inverse_order = ordering.startswith('-')
@@ -888,4 +887,9 @@ def app_launch_activity_redirect_view(request):
 
     # get activity and redirect
     activity = get_object_or_404(Activity, digest=digest)
-    return HttpResponseRedirect(reverse('oppia_preview_course_activity', args=[activity.section.course.id, activity.id]))
+
+    return render(request, 'oppia/course/activity_digest.html',
+                  {
+                      'activity': activity,
+                        'digest': digest
+                   })

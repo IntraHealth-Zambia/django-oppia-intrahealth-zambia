@@ -2,6 +2,7 @@
 *~
 .project
 .pydevproject
+.scannerwork
 .settings/
 /build
 /dist
@@ -9,3 +10,7 @@
 /src
 /.idea
 /.eggs
+/.scannerwork
+oppiamobile/settings_secret.py
+.coverage
+
