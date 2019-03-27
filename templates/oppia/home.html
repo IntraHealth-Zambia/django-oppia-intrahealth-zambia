@@ -28,27 +28,16 @@
 	{% include "oppia/includes/leaderboard.html" %}
 	<div><a href="{% url 'oppia_leaderboard' %}">{% trans "more..." %}</a></div>
 {% else %}
-<<<<<<< HEAD:oppia/templates/oppia/home.html
     {% static "oppia/images/unzalogo.png" as oppia_logo %}
-=======
-    {% static "oppia/images/dc-logo-150x150.png" as oppia_logo %}
 
 	{% settings_value 'OPPIA_ANDROID_PACKAGEID' as package_id %}
->>>>>>> upstream/master:templates/oppia/home.html
 	{% blocktrans %} 
 	<div style="text-align:center; margin-top:20px;">
 		<img src="{{ oppia_logo }}" alt="UNZA logo"/>
 	</div>
 	<div style="max-width:350px; text-align:center; margin: 10px auto ">
-<<<<<<< HEAD:oppia/templates/oppia/home.html
 	<h3>Welcome to UNZA Mobile</h3>
-	<div class="btn-primary btn btn-default"><a href="https://play.google.com/store/apps/details?id=org.intrahealth.zambia.oppia">Download UNZA Mobile App</a></div> 
-=======
-	<p><a href="https://digital-campus.org/oppiamobile/overview/">OppiaMobile</a> is the mobile learning platform from <a href="https://digital-campus.org">Digital Campus</a> to deliver learning content, multimedia and quizzes on your smartphone. All the content and activities can
-	be accessed and used even when you don't have an internet connection available on your mobile.</p>
-
-	<a class="btn-primary btn btn-default" href="https://play.google.com/store/apps/details?id={{package_id}}">Download OppiaMobile app</a>
->>>>>>> upstream/master:templates/oppia/home.html
+	<a class="btn-primary btn btn-default" href="https://play.google.com/store/apps/details?id={{package_id}}">Download UNZA Mobile App</a>
 	</div>
 	{% endblocktrans %}
 
